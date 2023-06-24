@@ -28008,197 +28008,6 @@ class Light extends Object3D {
 
 Light.prototype.isLight = true;
 
-const _projScreenMatrix$1 = /*@__PURE__*/ new Matrix4();
-const _lightPositionWorld$1 = /*@__PURE__*/ new Vector3();
-const _lookTarget$1 = /*@__PURE__*/ new Vector3();
-
-class LightShadow {
-
-	constructor( camera ) {
-
-		this.camera = camera;
-
-		this.bias = 0;
-		this.normalBias = 0;
-		this.radius = 1;
-		this.blurSamples = 8;
-
-		this.mapSize = new Vector2( 512, 512 );
-
-		this.map = null;
-		this.mapPass = null;
-		this.matrix = new Matrix4();
-
-		this.autoUpdate = true;
-		this.needsUpdate = false;
-
-		this._frustum = new Frustum();
-		this._frameExtents = new Vector2( 1, 1 );
-
-		this._viewportCount = 1;
-
-		this._viewports = [
-
-			new Vector4( 0, 0, 1, 1 )
-
-		];
-
-	}
-
-	getViewportCount() {
-
-		return this._viewportCount;
-
-	}
-
-	getFrustum() {
-
-		return this._frustum;
-
-	}
-
-	updateMatrices( light ) {
-
-		const shadowCamera = this.camera;
-		const shadowMatrix = this.matrix;
-
-		_lightPositionWorld$1.setFromMatrixPosition( light.matrixWorld );
-		shadowCamera.position.copy( _lightPositionWorld$1 );
-
-		_lookTarget$1.setFromMatrixPosition( light.target.matrixWorld );
-		shadowCamera.lookAt( _lookTarget$1 );
-		shadowCamera.updateMatrixWorld();
-
-		_projScreenMatrix$1.multiplyMatrices( shadowCamera.projectionMatrix, shadowCamera.matrixWorldInverse );
-		this._frustum.setFromProjectionMatrix( _projScreenMatrix$1 );
-
-		shadowMatrix.set(
-			0.5, 0.0, 0.0, 0.5,
-			0.0, 0.5, 0.0, 0.5,
-			0.0, 0.0, 0.5, 0.5,
-			0.0, 0.0, 0.0, 1.0
-		);
-
-		shadowMatrix.multiply( shadowCamera.projectionMatrix );
-		shadowMatrix.multiply( shadowCamera.matrixWorldInverse );
-
-	}
-
-	getViewport( viewportIndex ) {
-
-		return this._viewports[ viewportIndex ];
-
-	}
-
-	getFrameExtents() {
-
-		return this._frameExtents;
-
-	}
-
-	dispose() {
-
-		if ( this.map ) {
-
-			this.map.dispose();
-
-		}
-
-		if ( this.mapPass ) {
-
-			this.mapPass.dispose();
-
-		}
-
-	}
-
-	copy( source ) {
-
-		this.camera = source.camera.clone();
-
-		this.bias = source.bias;
-		this.radius = source.radius;
-
-		this.mapSize.copy( source.mapSize );
-
-		return this;
-
-	}
-
-	clone() {
-
-		return new this.constructor().copy( this );
-
-	}
-
-	toJSON() {
-
-		const object = {};
-
-		if ( this.bias !== 0 ) object.bias = this.bias;
-		if ( this.normalBias !== 0 ) object.normalBias = this.normalBias;
-		if ( this.radius !== 1 ) object.radius = this.radius;
-		if ( this.mapSize.x !== 512 || this.mapSize.y !== 512 ) object.mapSize = this.mapSize.toArray();
-
-		object.camera = this.camera.toJSON( false ).object;
-		delete object.camera.matrix;
-
-		return object;
-
-	}
-
-}
-
-class DirectionalLightShadow extends LightShadow {
-
-	constructor() {
-
-		super( new OrthographicCamera( - 5, 5, 5, - 5, 0.5, 500 ) );
-
-	}
-
-}
-
-DirectionalLightShadow.prototype.isDirectionalLightShadow = true;
-
-class DirectionalLight extends Light {
-
-	constructor( color, intensity ) {
-
-		super( color, intensity );
-
-		this.type = 'DirectionalLight';
-
-		this.position.copy( Object3D.DefaultUp );
-		this.updateMatrix();
-
-		this.target = new Object3D();
-
-		this.shadow = new DirectionalLightShadow();
-
-	}
-
-	dispose() {
-
-		this.shadow.dispose();
-
-	}
-
-	copy( source ) {
-
-		super.copy( source );
-
-		this.target = source.target.clone();
-		this.shadow = source.shadow.clone();
-
-		return this;
-
-	}
-
-}
-
-DirectionalLight.prototype.isDirectionalLight = true;
-
 class AmbientLight extends Light {
 
 	constructor( color, intensity ) {
@@ -77217,99 +77026,104 @@ class IFCLoader extends Loader {
 
 }
 
-//mapboxgl.accessToken = 'YOUR_API_KEY'
-//this API key is restricted to this github repo. Make a free account to get your own: https://account.mapbox.com/auth/signup/
-// mapboxgl.accessToken = 'pk.eyJ1IjoiaWZjbWFwYm94IiwiYSI6ImNsNDBlbW52dTBjNHMzY3F0djJkM3lyb3kifQ.oZ2hjiBIxjhNC3UnqIK8dg';
-mapboxgl.accessToken = 'pk.eyJ1Ijoic2Vhbmd1eSIsImEiOiJja2lxY280Y2UwNG4xMnhsanRsanhqamRiIn0.W8R_nJ4wEtFpZn_UxkTRxQ';
-const map = new mapboxgl.Map({
-  container: 'map',
-  style: 'mapbox://styles/mapbox/light-v10',
-  zoom: 20.5,
-  center: [13.4453, 52.4910],
+// import { RaycastMap } from "./RaycastMap";
+
+const map = new maplibregl.Map({
+  container: "map",
+  style: {
+    version: 8,
+    sources: {
+      osm: {
+        type: "raster",
+        tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+        tileSize: 256,
+        attribution: "&copy; OpenStreetMap Contributors",
+      },
+    },
+    layers: [
+      {
+        id: "osm",
+        type: "raster",
+        source: "osm",
+      },
+    ],
+  },
+  zoom: 14,
+  center: [13.4453, 52.491],
   pitch: 75,
   bearing: -80,
-  antialias: true
+  hash: true,
+  maxZoom: 24,
+  maxPitch: 75,
+  antialias: true,
 });
 
-const modelOrigin = [13.4453, 52.4910];
+const modelOrigin = [13.4453, 52.491];
 const modelAltitude = 0;
-const modelRotate = [Math.PI / 2, .72, 0];
- 
-const modelAsMercatorCoordinate = mapboxgl.MercatorCoordinate.fromLngLat(modelOrigin, modelAltitude);
- 
-const modelTransform = {
-  translateX: modelAsMercatorCoordinate.x,
-  translateY: modelAsMercatorCoordinate.y,
-  translateZ: modelAsMercatorCoordinate.z,
-  rotateX: modelRotate[0],
-  rotateY: modelRotate[1],
-  rotateZ: modelRotate[2],
-  scale: modelAsMercatorCoordinate.meterInMercatorCoordinateUnits()
-};
- 
-const scene = new Scene();
+
+const modelAsMercatorCoordinate = maplibregl.MercatorCoordinate.fromLngLat(
+  modelOrigin,
+  modelAltitude
+);
+
 const camera = new PerspectiveCamera();
+
+const cameraTransform = new Matrix4()
+  .makeTranslation(
+    modelAsMercatorCoordinate.x,
+    modelAsMercatorCoordinate.y,
+    modelAsMercatorCoordinate.z
+  )
+  .scale(new Vector3(1, -1, 1));
+
 const renderer = new WebGLRenderer({
   canvas: map.getCanvas(),
   antialias: true,
 });
 renderer.autoClear = false;
 
-const customLayer = {
+const scene = new Scene();
+const ifcLoader = new IFCLoader();
+const ifcModelsGroup = new Group();
+scene.add(ifcModelsGroup);
 
-  id: '3d-model',
-  type: 'custom',
-  renderingMode: '3d',
+const customLayer = {
+  id: "3d-model",
+  type: "custom",
+  renderingMode: "3d",
 
   onAdd: function () {
-    const ifcLoader = new IFCLoader();
-    ifcLoader.ifcManager.setWasmPath( '../../../' );
-    ifcLoader.load( '../../../IFC/01.ifc', function ( model ) {
-      scene.add( model );
+    ifcLoader.ifcManager.setWasmPath("../../../");
+    ifcLoader.load("../../../IFC/01.ifc", function (model) {
+      ifcModelsGroup.add(model);
+      map.flyTo({
+        zoom: 18.4
+      });
     });
 
-    const directionalLight = new DirectionalLight(0x404040);
-    const directionalLight2 = new DirectionalLight(0x404040);
-    const ambientLight = new AmbientLight( 0x404040, 3 ); 
+    ifcModelsGroup.rotateX(Math.PI / 2);
+    ifcModelsGroup.rotateY(Math.PI / 4);
+    ifcModelsGroup.scale.setScalar(
+      modelAsMercatorCoordinate.meterInMercatorCoordinateUnits()
+    );
 
-    directionalLight.position.set(0, -70, 100).normalize();
-    directionalLight2.position.set(0, 70, 100).normalize();
+    const ambientLight = new AmbientLight(0xffffff);
 
-    scene.add(directionalLight, directionalLight2, ambientLight);
-},
-
+    scene.add(ambientLight);
+  },
   render: function (gl, matrix) {
-    const rotationX = new Matrix4().makeRotationAxis(
-    new Vector3(1, 0, 0), modelTransform.rotateX);
-    const rotationY = new Matrix4().makeRotationAxis(
-    new Vector3(0, 1, 0), modelTransform.rotateY);
-    const rotationZ = new Matrix4().makeRotationAxis(
-    new Vector3(0, 0, 1), modelTransform.rotateZ);
-  
-    const m = new Matrix4().fromArray(matrix);
-    const l = new Matrix4()
-    .makeTranslation(
-    modelTransform.translateX,
-    modelTransform.translateY,
-    modelTransform.translateZ
-    )
-    .scale(
-    new Vector3(
-    modelTransform.scale,
-    -modelTransform.scale,
-    modelTransform.scale)
-    )
-    .multiply(rotationX)
-    .multiply(rotationY)
-    .multiply(rotationZ);
-    
-    camera.projectionMatrix = m.multiply(l);
+    camera.projectionMatrix = new Matrix4()
+
+      .fromArray(matrix)
+      .multiply(cameraTransform);
     renderer.resetState();
     renderer.render(scene, camera);
     map.triggerRepaint();
-  }
+  },
 };
- 
-map.on('style.load', () => {
-map.addLayer(customLayer, 'waterway-label');
+
+map.on("style.load", () => {
+  map.addLayer(customLayer);
+
+  // raycastHighlightStart();
 });
